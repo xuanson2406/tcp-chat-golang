@@ -18,7 +18,7 @@ func onMessage(conn net.Conn) {
 }
 
 func main() {
-	connection, err := net.Dial("tcp", "localhost:3000")
+	connection, err := net.Dial("tcp", os.Getenv("IP"))
 	if err != nil {
 		log.Fatal(err)
 	}
