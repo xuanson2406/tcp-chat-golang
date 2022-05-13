@@ -10,6 +10,7 @@ import (
 var (
 	conns   []net.Conn
 	IP      []string
+	name_IP = make(map[string]string)
 	connCh  = make(chan net.Conn)
 	closeCh = make(chan net.Conn)
 	msgCh   = make(chan string)
@@ -49,8 +50,10 @@ func main() {
 			fmt.Print(msg)
 
 		case conn := <-closeCh:
-			fmt.Println("client exit")
-			removeConn(conn)
+			IP_conn := conn.RemoteAddr().String()
+			userName, _ := name_IP[IP_conn]
+			fmt.Printf("client has: IP = %s ; Name = %s exit!\n", IP_conn, userName)
+			removeConn(conn) //Remove conn and IP of conn
 		}
 	}
 }
@@ -62,12 +65,9 @@ func removeConn(conn net.Conn) {
 			break
 		}
 	}
-
-	// i = ?  1 2 3 4
 	conns = append(conns[:i], conns[i+1:]...)
 	IP = append(IP[:i], IP[i+1:]...)
 }
-
 func publishMsg(conn net.Conn, msg string, person_IP string) {
 	for i := range conns {
 		if conns[i] != conn && IP[i] == person_IP {
@@ -84,22 +84,23 @@ func onMessage(conn net.Conn) {
 		if err != nil {
 			break
 		}
-		/*	for i := range conns {
-			if conns[i] == conn {
-				msg = msg + IP[i]
-			}
-		}*/
-		// fmt.Println(msg)
+		IP_string := conn.RemoteAddr().String()
 		var person_IP string
 		for i := range msg {
 			if msg[i] == '+' {
-				person_IP = msg[i+1 : len(msg)-1]
-				msg = msg[:i] + "\n"
+				person_IP = msg[:i]
+				msg = msg[i+1:]
 				break
 			}
 		}
+		for i := range msg {
+			if msg[i] == ':' {
+				name_IP[IP_string] = msg[:i]
+				break
+			}
+		}
+		fmt.Println(name_IP[IP_string])
 		msgCh <- msg
-		//	time.Sleep(10 * time.Second)
 		publishMsg(conn, msg, person_IP)
 
 	}
