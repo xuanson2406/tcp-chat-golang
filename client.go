@@ -32,8 +32,8 @@ func main() {
 	PersonInput, _ := personReader.ReadString('\n')
 	PersonInput = PersonInput[:len(PersonInput)-1]
 
-	fmt.Println("********** MESSAGES **********")
-
+	fmt.Println("********** WELCOME TO SOCKET TCP CHAT  **********")
+	fmt.Println("*************************************************")
 	go onMessage(connection)
 
 	for {
@@ -43,8 +43,8 @@ func main() {
 			break
 		}
 
-		msg = fmt.Sprintf("%s: %s+%s\n", nameInput,
-			msg[:len(msg)-1], PersonInput)
+		msg = fmt.Sprintf("%s+%s: %s\n", PersonInput, nameInput,
+			msg[:len(msg)-1])
 
 		connection.Write([]byte(msg))
 	}
