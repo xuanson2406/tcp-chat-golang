@@ -85,10 +85,10 @@ func onMessage(conn net.Conn) {
 			break
 		}
 		IP_string := conn.RemoteAddr().String()
-		var person_IP string
+		var person_Name string
 		for i := range msg {
 			if msg[i] == '+' {
-				person_IP = msg[:i]
+				person_Name = msg[:i]
 				msg = msg[i+1:]
 				break
 			}
@@ -101,6 +101,12 @@ func onMessage(conn net.Conn) {
 		}
 		fmt.Println(name_IP[IP_string])
 		msgCh <- msg
+		var person_IP string
+		for user_IP, user_Name := range name_IP {
+			if user_Name == person_Name {
+				person_IP = user_IP
+			}
+		}
 		publishMsg(conn, msg, person_IP)
 
 	}
