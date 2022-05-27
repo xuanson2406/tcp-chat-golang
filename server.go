@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 )
 
 var (
@@ -29,12 +30,6 @@ func main() {
 			}
 			ip_conn := conn.RemoteAddr()
 			segments := ip_conn.String()
-			for i := range segments {
-				if segments[i] == ':' {
-					segments = segments[:i]
-					break
-				}
-			}
 			IP = append(IP, segments)
 			conns = append(conns, conn)
 			connCh <- conn
@@ -52,7 +47,7 @@ func main() {
 		case conn := <-closeCh:
 			IP_conn := conn.RemoteAddr().String()
 			userName, _ := name_IP[IP_conn]
-			fmt.Printf("client has: IP = %s ; Name = %s exit!\n", IP_conn, userName)
+			fmt.Printf("client has: IP = %s ; Name = %s exit! (%s) \n", IP_conn, userName, time.Now().Format("2006-01-02 15:04:05"))
 			removeConn(conn) //Remove conn and IP of conn
 		}
 	}
@@ -68,48 +63,53 @@ func removeConn(conn net.Conn) {
 	conns = append(conns[:i], conns[i+1:]...)
 	IP = append(IP[:i], IP[i+1:]...)
 }
-func publishMsg(conn net.Conn, msg string, person_IP string) {
+func publishMsg(conn net.Conn, msg string, person_Name string) {
+	var person_IP string
+	for user_IP, user_Name := range name_IP {
+		if user_Name == person_Name {
+			person_IP = user_IP
+			break
+		}
+	}
 	for i := range conns {
 		if conns[i] != conn && IP[i] == person_IP {
 			conns[i].Write([]byte(msg))
 		}
 	}
 }
-
+func Reader(conn net.Conn, init_flag *int) string {
+	reader := bufio.NewReader(conn)
+	msg, err := reader.ReadString('\n')
+	if err != nil {
+		*init_flag = -1
+	}
+	return msg
+}
 func onMessage(conn net.Conn) {
+	var init_flag int = 0
 	for {
-		reader := bufio.NewReader(conn)
-		msg, err := reader.ReadString('\n')
-
-		if err != nil {
+		if init_flag == -1 {
 			break
 		}
-		IP_string := conn.RemoteAddr().String()
-		var person_Name string
-		for i := range msg {
-			if msg[i] == '+' {
-				person_Name = msg[:i]
-				msg = msg[i+1:]
-				break
+		if init_flag == 0 {
+			msg := Reader(conn, &init_flag)
+			IP_string := conn.RemoteAddr().String()
+			name_IP[IP_string] = msg[:len(msg)-1]
+			fmt.Printf("client has: IP = %s ; Name = %s --> init socket to the server (%s)\n", IP_string, name_IP[IP_string], time.Now().Format("2006-01-02 15:04:05"))
+			init_flag++
+		} else {
+			msg := Reader(conn, &init_flag)
+			var person_Name string
+			for i := range msg {
+				if msg[i] == '+' {
+					person_Name = msg[:i]
+					msg = msg[i+1:]
+					break
+				}
 			}
+			msgCh <- msg
+			publishMsg(conn, msg, person_Name)
 		}
-		for i := range msg {
-			if msg[i] == ':' {
-				name_IP[IP_string] = msg[:i]
-				break
-			}
-		}
-		fmt.Println(name_IP[IP_string])
-		msgCh <- msg
-		var person_IP string
-		for user_IP, user_Name := range name_IP {
-			if user_Name == person_Name {
-				person_IP = user_IP
-			}
-		}
-		publishMsg(conn, msg, person_IP)
-
 	}
-
 	closeCh <- conn
 }
