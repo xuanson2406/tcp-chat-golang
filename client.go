@@ -35,7 +35,9 @@ func main() {
 	fmt.Println("********** WELCOME TO SOCKET TCP CHAT  **********")
 	fmt.Println("*************************************************")
 	go onMessage(connection)
-
+	var name string
+	name = fmt.Sprintf("%s\n", nameInput)
+	connection.Write([]byte(name))
 	for {
 		msgReader := bufio.NewReader(os.Stdin)
 		msg, err := msgReader.ReadString('\n')
